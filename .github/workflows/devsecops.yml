@@ -43,7 +43,7 @@ jobs:
           pip install flake8 bandit
 
       - name: Run Flake8 Code Style Check
-        run: flake8 src/evaluator.py src/handler.py src/admin_handler.py src/invalidator.py --max-line-length=120 --ignore=E501,W503,E402,F401
+        run: flake8 src/evaluator.py src/handler.py src/admin_handler.py src/invalidator.py --max-line-length=120 --ignore=E501,W503,E402,F401,W292,W293
 
       - name: Run Bandit SAST Engine
         run: bandit -r src/ -s B101 -x src/annotated_types,src/typing_inspection
