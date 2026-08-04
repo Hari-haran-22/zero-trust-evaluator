@@ -83,7 +83,7 @@ jobs:
 
       - name: Run Pytest & Generate Coverage
         run: |
-          PYTHONPATH=src python -m pytest tests/ --cov=src/evaluator.py --cov-report=term-missing --cov-fail-under=80
+          PYTHONPATH=src python -m pytest tests/ --cov=evaluator --cov-report=term-missing --cov-fail-under=80
 
   terraform-deploy:
     name: 5. Infrastructure Deployment
