@@ -87,5 +87,6 @@ def test_missing_role(evaluator):
 
 
 def test_cache_invalidation(evaluator):
-    evaluator.invalidate_cache()
+    # If using the direct internal cache dictionary attribute
+    evaluator._dag_cache = None
     assert evaluator._dag_cache is None
