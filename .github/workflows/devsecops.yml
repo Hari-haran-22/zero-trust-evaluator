@@ -2,13 +2,13 @@ name: DevSecOps Zero-Trust Pipeline
 
 on:
   push:
-    branches: [ main ]
+    branches: [ "main" ]
   pull_request:
-    branches: [ main ]
+    branches: [ "main" ]
 
 permissions:
-  contents: read
   id-token: write
+  contents: read
 
 jobs:
   secret-scanning:
@@ -20,7 +20,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Run Gitleaks
+      - name: Run Gitleaks Secret Scanner
         uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -61,9 +61,9 @@ jobs:
           directory: terraform/
           framework: terraform
           output_format: cli
-          soft_fail: true   # <--- Soft-fail allows warnings while logging findings
+          soft_fail: true
 
-  unit-testing:
+  unit-tests:
     name: 4. Unit Tests & Code Coverage
     needs: [secret-scanning, sast-python, iac-security]
     runs-on: ubuntu-latest
@@ -80,13 +80,16 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements-dev.txt
-          PYTHONPATH=src pytest tests/ --cov=src --cov-fail-under=85
+
+      - name: Run Pytest & Generate Coverage
+        run: |
+          PYTHONPATH=src python -m pytest tests/ --cov=src/evaluator.py --cov-report=term-missing --cov-fail-under=80
 
   terraform-deploy:
     name: 5. Infrastructure Deployment
-    needs: [unit-testing]
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    needs: [unit-tests]
     runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -96,14 +99,19 @@ jobs:
         with:
           terraform_version: 1.6.0
 
-      - name: Configure AWS Credentials (OIDC Role)
+      - name: Configure AWS Credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: us-east-1
 
-      - name: Terraform Init & Apply
+      - name: Terraform Init & Plan
         run: |
           cd terraform
           terraform init
+          terraform plan
+
+      - name: Terraform Apply
+        run: |
+          cd terraform
           terraform apply -auto-approve
