@@ -1,4 +1,4 @@
-"""Unit test suite for Zero-Trust Evaluator engine logic."""
+"""Expanded Unit test suite for Zero-Trust Evaluator engine logic."""
 
 import pytest
 from evaluator import AccessRequest, Actions, EvaluationContext, RoleNode, ZeroTrustEvaluator
@@ -9,7 +9,8 @@ class MockRoleStore:
         return {
             "Admin": RoleNode(
                 role_name="Admin",
-                allowed_actions=Actions.READ | Actions.WRITE | Actions.EXECUTE | Actions.DELETE
+                allowed_actions=Actions.READ | Actions.WRITE | Actions.EXECUTE | Actions.DELETE,
+                parents=["Developer"]
             ),
             "Developer": RoleNode(
                 role_name="Developer",
@@ -72,3 +73,19 @@ def test_abac_deny_unauthorized_ip(evaluator):
     decision = evaluator.evaluate_access(req)
     assert decision["decision"] == "DENY"
     assert "outside authorized subnets" in decision["reason"]
+
+
+def test_missing_role(evaluator):
+    req = AccessRequest(
+        user_id="u5",
+        assigned_roles=["NonExistentRole"],
+        requested_action=Actions.READ,
+        context=EvaluationContext(request_timestamp=100, source_ip="10.0.1.10", device_trust_level=4)
+    )
+    decision = evaluator.evaluate_access(req)
+    assert decision["decision"] == "DENY"
+
+
+def test_cache_invalidation(evaluator):
+    evaluator.invalidate_cache()
+    assert evaluator._dag_cache is None
